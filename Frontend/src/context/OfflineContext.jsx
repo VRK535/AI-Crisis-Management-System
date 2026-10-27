@@ -58,6 +58,12 @@ export function OfflineProvider({ children }) {
     }
   };
 
+  const saveSafeZonesOffline = (safeZones, location) => {
+    localStorage.setItem("offline_safe_zones", JSON.stringify(safeZones));
+    localStorage.setItem("offline_safe_zones_location", JSON.stringify(location));
+    setOfflineSafeZones(safeZones);
+  };
+
   // Add an offline mesh message to buffer
   const queueOfflineMeshMessage = (msg) => {
     const updated = [
@@ -105,6 +111,7 @@ export function OfflineProvider({ children }) {
         syncing,
         lastSyncTime,
         downloadSafeZonesForOffline,
+        saveSafeZonesOffline,
         queueOfflineMeshMessage,
         syncPendingMeshMessages,
       }}
@@ -121,4 +128,3 @@ export function useOffline() {
   }
   return context;
 }
-

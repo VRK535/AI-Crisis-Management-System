@@ -1,6 +1,13 @@
 import React, { useEffect, useRef } from "react";
 
-export default function MapView({ userCoords, shelters = [], onSelectShelter }) {
+export default function MapView({
+  userCoords,
+  recenterKey = 0,
+  shelters = [],
+  onSelectShelter,
+  controls,
+  mapActions,
+}) {
   const mapRef = useRef(null);
   const leafletInstance = useRef(null);
   const markersRef = useRef([]);
@@ -13,23 +20,42 @@ export default function MapView({ userCoords, shelters = [], onSelectShelter }) 
     }
 
     const L = window.L;
+    const initialCoords = userCoords || [77.2090, 28.6139];
+    const map = L.map(mapRef.current).setView([initialCoords[1], initialCoords[0]], 13);
+    leafletInstance.current = map;
 
-    const defaultLat = userCoords ? userCoords[1] : 28.6139;
-    const defaultLng = userCoords ? userCoords[0] : 77.2090;
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 19,
+    }).addTo(map);
 
-    if (!leafletInstance.current) {
-      leafletInstance.current = L.map(mapRef.current).setView([defaultLat, defaultLng], 13);
+    let resizeFrame = requestAnimationFrame(() => map.invalidateSize());
+    const mapResizeObserver = new ResizeObserver(() => {
+      cancelAnimationFrame(resizeFrame);
+      resizeFrame = requestAnimationFrame(() => map.invalidateSize());
+    });
+    mapResizeObserver.observe(mapRef.current);
 
-      // OpenStreetMap dark-friendly tiles
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(leafletInstance.current);
-    } else {
-      leafletInstance.current.setView([defaultLat, defaultLng], 13);
-    }
+    return () => {
+      mapResizeObserver.disconnect();
+      cancelAnimationFrame(resizeFrame);
+      map.remove();
+      leafletInstance.current = null;
+    };
+  }, []);
 
+  useEffect(() => {
+    if (!leafletInstance.current || !userCoords || userCoords.length !== 2) return;
+    leafletInstance.current.flyTo([userCoords[1], userCoords[0]], 15, {
+      animate: true,
+      duration: 0.8,
+    });
+  }, [userCoords, recenterKey]);
+
+  useEffect(() => {
     const map = leafletInstance.current;
+    if (!map || typeof window.L === "undefined") return;
+    const L = window.L;
 
     // Clear existing markers
     markersRef.current.forEach((m) => m.remove());
@@ -99,27 +125,23 @@ export default function MapView({ userCoords, shelters = [], onSelectShelter }) 
 
       markersRef.current.push(marker);
     });
-  }, [userCoords, shelters]);
+  }, [userCoords, shelters, onSelectShelter]);
 
   return (
-    <div className="relative w-full h-full min-h-[350px] rounded-xl overflow-hidden border border-slate-800 shadow-inner">
-      <div ref={mapRef} className="w-full h-full" />
-      {/* Legend Badge Overlay */}
-      <div className="absolute bottom-3 left-3 z-[400] bg-slate-900/90 backdrop-blur border border-slate-800 px-3 py-2 rounded-lg text-[10px] space-y-1 shadow-md pointer-events-none">
-        <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-          <span className="text-slate-300">Open & Recommended Shelter</span>
+    <div className="relative w-full h-full min-h-0 rounded-xl overflow-hidden border border-slate-800 shadow-inner">
+      <div ref={mapRef} className="absolute inset-0" />
+      {controls && (
+        <div className="absolute top-3 right-3 z-[400] pointer-events-none">
+          <div className="pointer-events-auto">
+            {controls}
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-          <span className="text-slate-300">Moderate / Near Capacity</span>
+      )}
+      {mapActions && (
+        <div className="absolute right-4 bottom-8 z-[400] flex flex-col gap-2">
+          {mapActions}
         </div>
-        <div className="flex items-center space-x-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-          <span className="text-slate-300">Your Real-time GPS Position</span>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
-

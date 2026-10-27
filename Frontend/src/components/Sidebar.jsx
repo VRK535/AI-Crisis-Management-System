@@ -50,12 +50,22 @@ const NAV_ITEMS = [
   },
 ];
 
-export default function Sidebar({ activeTab, onSelectTab }) {
+export default function Sidebar({ activeTab, onSelectTab, onMinimize }) {
   return (
-    <aside className="w-full md:w-64 bg-slate-900/60 border-r border-slate-800 flex flex-col justify-between p-3 shrink-0">
+    <aside className="fixed left-0 top-16 bottom-0 z-50 w-72 bg-slate-900 border-r border-slate-800 flex flex-col justify-between p-3 shrink-0 shadow-2xl md:static md:z-auto md:w-64 md:shadow-none">
       <div className="space-y-1">
-        <div className="px-3 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-          Crisis Operations
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            Crisis Operations
+          </span>
+          <button
+            type="button"
+            onClick={onMinimize}
+            aria-label="Minimize navigation"
+            className="rounded-md px-2 py-1 text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <span aria-hidden="true">‹</span>
+          </button>
         </div>
 
         {NAV_ITEMS.map((item) => {
@@ -64,6 +74,7 @@ export default function Sidebar({ activeTab, onSelectTab }) {
             <button
               key={item.id}
               onClick={() => onSelectTab(item.id)}
+              aria-current={isActive ? "page" : undefined}
               className={`w-full text-left px-3 py-2.5 rounded-xl transition flex items-center justify-between group ${
                 isActive
                   ? item.highlight
@@ -113,4 +124,3 @@ export default function Sidebar({ activeTab, onSelectTab }) {
     </aside>
   );
 }
-
